@@ -67,13 +67,34 @@ public class CryptoService {
         }
     }
 
+    private static final String AES_KEY = "MySuperSecret123"; // 16 bytes for AES-128
+
+    private String encryptAES(String data) throws Exception {
+        javax.crypto.spec.SecretKeySpec key = new javax.crypto.spec.SecretKeySpec(AES_KEY.getBytes(), "AES");
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key);
+        return Base64.getEncoder().encodeToString(cipher.doFinal(data.getBytes()));
+    }
+
+    private String decryptAES(String encryptedData) throws Exception {
+        javax.crypto.spec.SecretKeySpec key = new javax.crypto.spec.SecretKeySpec(AES_KEY.getBytes(), "AES");
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
+        cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key);
+        return new String(cipher.doFinal(Base64.getDecoder().decode(encryptedData)));
+    }
+
     // Helpers to convert Keys to/from String
     public String encodePublicKey(PublicKey key) {
         return Base64.getEncoder().encodeToString(key.getEncoded());
     }
 
     public String encodePrivateKey(PrivateKey key) {
-        return Base64.getEncoder().encodeToString(key.getEncoded());
+        try {
+            String base64Key = Base64.getEncoder().encodeToString(key.getEncoded());
+            return encryptAES(base64Key); // ENCRYPTED BEFORE DB STORAGE
+        } catch (Exception e) {
+            throw new RuntimeException("AES Encryption failed for Private Key", e);
+        }
     }
 
     public PublicKey decodePublicKey(String keyStr) throws Exception {
@@ -84,7 +105,8 @@ public class CryptoService {
     }
 
     public PrivateKey decodePrivateKey(String keyStr) throws Exception {
-        byte[] byteKey = Base64.getDecoder().decode(keyStr.getBytes());
+        String decryptedBase64 = decryptAES(keyStr);
+        byte[] byteKey = Base64.getDecoder().decode(decryptedBase64.getBytes());
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(byteKey);
         KeyFactory kf = KeyFactory.getInstance("EC");
         return kf.generatePrivate(keySpec);

@@ -22,31 +22,22 @@ public class SmartContractController {
             @AuthenticationPrincipal User user, 
             @RequestBody ContractSignRequest request) {
             
-        try {
-            String resultMsg = switch (user.getRole()) {
-                case BUYER -> contractService.buyerSign(user, request);
-                case SELLER -> contractService.sellerSign(user, request);
-                case TRANSPORTER -> contractService.transporterSign(user, request);
-                case ADMIN -> contractService.adminSign(user, request);
-                default -> throw new IllegalStateException("Unknown Role");
-            };
-            
-            return ResponseEntity.ok(new ApiResponse(true, resultMsg));
-            
-        } catch (Exception _) {
-            return ResponseEntity.badRequest().body(new ApiResponse(false, "Cryptographic Signature Failed"));
-        }
+        String resultMsg = switch (user.getRole()) {
+            case BUYER -> contractService.buyerSign(user, request);
+            case SELLER -> contractService.sellerSign(user, request);
+            case TRANSPORTER -> contractService.transporterSign(user, request);
+            case ADMIN -> contractService.adminSign(user, request);
+            default -> throw new IllegalStateException("Unknown Role for Signature");
+        };
+        
+        return ResponseEntity.ok(new ApiResponse(true, resultMsg));
     }
 
     @PostMapping("/dispute")
     public ResponseEntity<ApiResponse> disputeContract(
             @AuthenticationPrincipal User user, 
             @RequestBody ContractSignRequest request) {
-        try {
-            String resultMsg = contractService.processDispute(request.orderId(), user);
-            return ResponseEntity.ok(new ApiResponse(true, resultMsg));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
-        }
+        String resultMsg = contractService.processDispute(request.orderId(), user);
+        return ResponseEntity.ok(new ApiResponse(true, resultMsg));
     }
 }

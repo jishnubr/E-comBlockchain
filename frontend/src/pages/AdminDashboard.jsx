@@ -1,35 +1,38 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import axiosInstance from '../api/axiosInstance';
 import { useAuth } from '../hooks/useAuth';
-import { Scale, LogOut, FileSignature, AlertCircle } from 'lucide-react';
+import { Scale, LogOut, FileSignature, Loader2 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, token, logout } = useAuth();
+  const [settlingId, setSettlingId] = useState(null);
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    fetchOrders();
-  }, [token]);
+  useEffect(() => { fetchOrders(); }, []);
 
   const fetchOrders = () => {
+    setIsLoading(true);
     axiosInstance.get('/admin/orders')
-      .then(response => {
-        setOrders(response.data);
-        setIsLoading(false);
-      })
-      .catch(error => console.error(error));
+      .then(r => setOrders(r.data))
+      .catch(() => toast.error('Failed to decrypt ledger'))
+      .finally(() => setIsLoading(false));
   };
 
   const settleContract = async (orderId) => {
-    try {
-      const res = await axiosInstance.post('/contracts/sign', { orderId });
-      alert(res.data.message);
-      fetchOrders();
-    } catch (err) {
-      alert(err.response?.data?.message || "Settlement failed");
-    }
+    setSettlingId(orderId);
+    const promise = axiosInstance.post('/contracts/sign', { orderId })
+      .then(r => { fetchOrders(); return r.data.message; });
+    toast.promise(promise, {
+      loading: 'Settling escrow on blockchain...',
+      success: (msg) => msg,
+      error: (err) => err.response?.data?.message || 'Settlement failed',
+    });
+    promise.finally(() => setSettlingId(null));
   };
+
+  const pendingSettlement = orders.filter(o => o.orderLevel === 'DELIVERED');
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -40,12 +43,12 @@ export default function AdminDashboard() {
               <Scale className="h-8 w-8 text-amber-500" />
               <span className="font-bold text-xl tracking-tight">Arbitrator Node</span>
             </div>
-            <button 
-              onClick={logout} 
-              className="flex items-center gap-2 bg-indigo-900 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              <LogOut className="h-4 w-4" /> Logout
-            </button>
+            <div className="flex items-center gap-4">
+              <span className="text-indigo-300 text-sm hidden sm:block">{user?.name}</span>
+              <button onClick={logout} className="flex items-center gap-2 bg-indigo-900 hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                <LogOut className="h-4 w-4" /> Logout
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -70,24 +73,24 @@ export default function AdminDashboard() {
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-500">Decrypting ledger...</td></tr>
-                ) : orders.filter(o => o.orderLevel === 'DELIVERED').length === 0 ? (
+                ) : pendingSettlement.length === 0 ? (
                   <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-500">No contracts awaiting settlement.</td></tr>
                 ) : (
-                  orders.filter(o => o.orderLevel === 'DELIVERED').map(order => (
+                  pendingSettlement.map(order => (
                     <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 text-sm font-mono text-slate-600">#{order.id}</td>
                       <td className="px-6 py-4 text-sm font-bold text-amber-700">${order.price}</td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">
-                          {order.orderLevel}
-                        </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">{order.orderLevel}</span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button 
+                        <button
+                          disabled={settlingId === order.id}
                           onClick={() => settleContract(order.id)}
-                          className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 shadow-sm"
+                          className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 disabled:opacity-60"
                         >
-                          <FileSignature className="w-4 h-4" /> Settle Escrow
+                          {settlingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
+                          Settle Escrow
                         </button>
                       </td>
                     </tr>
