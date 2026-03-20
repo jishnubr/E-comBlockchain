@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BuyerDashboard from './pages/BuyerDashboard';
+import Shop from './pages/Shop';
 import SellerDashboard from './pages/SellerDashboard';
 import TransporterDashboard from './pages/TransporterDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -27,6 +28,9 @@ function App() {
         {/* Protected Routes */}
         <Route path="/dashboard/buyer" element={
           user?.role === 'BUYER' ? <BuyerDashboard /> : <Navigate to="/" />
+        } />
+        <Route path="/shop" element={
+          user?.role === 'BUYER' ? <Shop /> : <Navigate to="/" />
         } />
         <Route path="/dashboard/seller" element={
           user?.role === 'SELLER' ? <SellerDashboard /> : <Navigate to="/" />

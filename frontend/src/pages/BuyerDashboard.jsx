@@ -49,7 +49,13 @@ export default function BuyerDashboard() {
               <span className="font-bold text-xl tracking-tight">BlockStore</span>
             </div>
             <div className="flex items-center gap-6">
-              <span className="text-indigo-200 text-sm hidden sm:block">Logged in as <span className="text-white font-semibold">{user?.name || 'Buyer'}</span></span>
+              <button 
+                onClick={() => window.location.href='/shop'} 
+                className="text-emerald-400 font-bold hover:text-emerald-300 transition-colors hidden sm:block"
+              >
+                Go to Shop
+              </button>
+              <span className="text-indigo-200 text-sm hidden md:block">Logged in as <span className="text-white font-semibold">{user?.name || 'Buyer'}</span></span>
               <button 
                 onClick={logout} 
                 className="flex items-center gap-2 bg-indigo-800 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"

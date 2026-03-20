@@ -10,7 +10,11 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Transient
+    private String productName;
+
     private Long buyerId;
+    private Long transporterId; // Nullable until a transporter claims it
     private Long productId;
     private String orderLevel;
     private String currLocation;
@@ -27,8 +31,14 @@ public class Order {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+
     public Long getBuyerId() { return buyerId; }
     public void setBuyerId(Long buyerId) { this.buyerId = buyerId; }
+
+    public Long getTransporterId() { return transporterId; }
+    public void setTransporterId(Long transporterId) { this.transporterId = transporterId; }
 
     public Long getProductId() { return productId; }
     public void setProductId(Long productId) { this.productId = productId; }

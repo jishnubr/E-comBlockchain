@@ -1,6 +1,6 @@
 package com.ecomblockchain.service;
 
-import com.ecomblockchain.dto.ContractSignRequest;
+import com.ecomblockchain.dto.*;
 import com.ecomblockchain.model.*;
 import com.ecomblockchain.repository.*;
 import org.springframework.stereotype.Service;
@@ -237,5 +237,54 @@ public class ContractService {
         orderRepository.save(order);
         
         return "Dispute resolved in favor of " + winner;
+    }
+
+    @Transactional
+    public String placeOrder(User buyer, OrderRequestDto req) {
+        Product p = productRepository.findById(req.productId()).orElseThrow(() -> new RuntimeException("Product not found"));
+        Order o = new Order();
+        o.setBuyerId(buyer.getId());
+        o.setProductId(p.getId());
+        o.setPrice(p.getPrice());
+        o.setQuantity(req.quantity());
+        o.setOrderLevel("PENDING"); 
+        orderRepository.save(o);
+        return "Order placed successfully! Please sign the contract to secure escrow.";
+    }
+
+    @Transactional
+    public String claimOrder(User transporter, Long orderId) {
+        Order o = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (o.getTransporterId() != null) {
+            throw new RuntimeException("Already claimed by another transporter!");
+        }
+        
+        // Ensure it's ready for transit
+        validateOrderState(o, "SELLER_SIGNED");
+        
+        o.setTransporterId(transporter.getId());
+        o.setOrderLevel("IN_TRANSIT");
+        orderRepository.save(o);
+        return "Shipment claimed by " + transporter.getName();
+    }
+
+    @Transactional
+    public String handoverOrder(Long orderId, User currentTransporter, Long nextTransporterId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        
+        // Fairness: Only the CURRENT transporter can hand it over
+        if (!currentTransporter.getId().equals(order.getTransporterId())) {
+            throw new RuntimeException("Unauthorized: You do not have possession of this item.");
+        }
+        
+        validateOrderState(order, "IN_TRANSIT");
+        
+        // To strictly enforce standard blockchain handover, the old transporter must sign the order over 
+        // to the new transporter. We assume this is checked/authorized via their JWT in the controller.
+        
+        order.setTransporterId(nextTransporterId);
+        orderRepository.save(order);
+        
+        return "Handover successful to Transporter ID " + nextTransporterId;
     }
 }

@@ -53,4 +53,32 @@ public class SmartContractController {
         String resultMsg = contractService.resolveDispute(orderId, winner);
         return ResponseEntity.ok(new ApiResponse(true, resultMsg));
     }
+
+    @PostMapping("/buyer/place-order")
+    public ResponseEntity<ApiResponse> placeOrder(
+            @AuthenticationPrincipal User user,
+            @RequestBody OrderRequestDto request) {
+        if (user.getRole() != com.ecomblockchain.model.Role.BUYER) throw new RuntimeException("Unauthorized.");
+        String resultMsg = contractService.placeOrder(user, request);
+        return ResponseEntity.ok(new ApiResponse(true, resultMsg));
+    }
+
+    @PostMapping("/claim/{orderId}")
+    public ResponseEntity<ApiResponse> claimOrder(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long orderId) {
+        if (user.getRole() != com.ecomblockchain.model.Role.TRANSPORTER) throw new RuntimeException("Unauthorized.");
+        String resultMsg = contractService.claimOrder(user, orderId);
+        return ResponseEntity.ok(new ApiResponse(true, resultMsg));
+    }
+
+    @PostMapping("/handover/{orderId}/{nextTransporterId}")
+    public ResponseEntity<ApiResponse> handoverOrder(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long orderId,
+            @PathVariable Long nextTransporterId) {
+        if (user.getRole() != com.ecomblockchain.model.Role.TRANSPORTER) throw new RuntimeException("Unauthorized.");
+        String resultMsg = contractService.handoverOrder(orderId, user, nextTransporterId);
+        return ResponseEntity.ok(new ApiResponse(true, resultMsg));
+    }
 }

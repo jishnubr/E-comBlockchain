@@ -24,4 +24,9 @@ public class ProductController {
         productRepository.save(product);
         return ResponseEntity.ok(new ApiResponse(true, "Product added successfully to the Blockchain catalog."));
     }
+
+    @GetMapping
+    public java.util.List<Product> getAllProducts() {
+        return productRepository.findAll();
+    }
 }
