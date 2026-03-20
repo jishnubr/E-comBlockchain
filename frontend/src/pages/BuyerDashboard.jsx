@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance';
 import { useAuth } from '../hooks/useAuth';
 
 export default function BuyerDashboard() {
@@ -8,19 +8,14 @@ export default function BuyerDashboard() {
 
   // Fetch data from Spring Boot 4 when component mounts
   useEffect(() => {
-    axios.get('http://localhost:8080/api/v1/buyer/orders', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    axiosInstance.get('/buyer/orders')
     .then(response => setOrders(response.data))
     .catch(error => console.error("Error fetching orders", error));
   }, [token]);
 
   const signContract = async (orderId) => {
     try {
-      const res = await axios.post('http://localhost:8080/api/v1/contracts/sign', 
-        { orderId: orderId },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
+      const res = await axiosInstance.post('/contracts/sign', { orderId: orderId });
       alert(res.data.message); 
       // Refresh orders logic would go here
     } catch (err) {
