@@ -32,6 +32,32 @@ export default function TransporterDashboard() {
     promise.finally(() => setVerifyingId(null));
   };
 
+  const claimOrder = async (orderId) => {
+    setVerifyingId(orderId);
+    const promise = axiosInstance.post('/contracts/claim/' + orderId)
+      .then(r => { fetchOrders(); return r.data.message; });
+    toast.promise(promise, {
+      loading: 'Claiming shipment...',
+      success: (msg) => msg,
+      error: (err) => err.response?.data?.message || 'Failed to claim',
+    });
+    promise.finally(() => setVerifyingId(null));
+  };
+
+  const handoverOrder = async (orderId) => {
+    const nextId = prompt("Enter the numerical ID of the next Transporter:");
+    if (!nextId) return;
+    setVerifyingId(orderId);
+    const promise = axiosInstance.post(`/contracts/handover/${orderId}/${nextId}`)
+      .then(r => { fetchOrders(); return r.data.message; });
+    toast.promise(promise, {
+      loading: 'Processing handover...',
+      success: (msg) => msg,
+      error: (err) => err.response?.data?.message || 'Handover failed',
+    });
+    promise.finally(() => setVerifyingId(null));
+  };
+
   const activeOrders = orders.filter(o => o.orderLevel === 'SELLER_SIGNED' || o.orderLevel === 'IN_TRANSIT');
 
   return (
@@ -88,14 +114,33 @@ export default function TransporterDashboard() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">{order.orderLevel}</span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          disabled={verifyingId === order.id}
-                          onClick={() => verifyDelivery(order.id)}
-                          className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 disabled:opacity-60"
-                        >
-                          {verifyingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                          Verify Delivery
-                        </button>
+                        {order.orderLevel === 'SELLER_SIGNED' ? (
+                          <button
+                            disabled={verifyingId === order.id}
+                            onClick={() => claimOrder(order.id)}
+                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 disabled:opacity-60"
+                          >
+                            {verifyingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
+                            Claim
+                          </button>
+                        ) : (
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              disabled={verifyingId === order.id}
+                              onClick={() => handoverOrder(order.id)}
+                              className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 disabled:opacity-60"
+                            >
+                              Handover
+                            </button>
+                            <button
+                              disabled={verifyingId === order.id}
+                              onClick={() => verifyDelivery(order.id)}
+                              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 disabled:opacity-60"
+                            >
+                              Deliver
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))
