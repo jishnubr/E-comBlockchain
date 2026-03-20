@@ -1,0 +1,12 @@
+# AI Indexing Ignore File
+
+**/node_modules/**
+**/target/**
+**/dist/**
+**/build/**
+**/.git/**
+**/.gemini/**
+**/*.log
+**/*.tmp
+**/package-lock.json
+**/yarn.lock
