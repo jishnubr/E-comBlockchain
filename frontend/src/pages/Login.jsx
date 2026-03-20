@@ -1,50 +1,105 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
+import { Mail, Lock, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const response = await axiosInstance.post('/auth/login', { email, password });
       const { token, role, name } = response.data;
       
       login(token, { role, name });
       navigate(`/dashboard/${role.toLowerCase()}`);
-      
     } catch (err) {
-      setError('Invalid email or password');
+      setError('Invalid email or password. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="p-8 bg-white rounded shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center">Blockchain Login</h2>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         
-        {error && <div className="mb-4 text-red-600 text-center">{error}</div>}
+        {/* Header Section */}
+        <div className="bg-indigo-50 p-8 text-center border-b border-indigo-100">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-full mb-4 shadow-lg shadow-indigo-200">
+            <ShieldCheck className="h-8 w-8 text-white" />
+          </div>
+          <h2 className="text-3xl font-extrabold text-slate-800">Welcome Back</h2>
+          <p className="text-slate-500 mt-2">Secure your blockchain transactions</p>
+        </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700">Email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700">Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-        </div>
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200">
-          Login
-        </button>
-      </form>
+        {/* Form Section */}
+        <form onSubmit={handleSubmit} className="p-8">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-5 relative">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-slate-400" />
+              </div>
+              <input 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" 
+                placeholder="buyer@test.com"
+                required 
+              />
+            </div>
+          </div>
+
+          <div className="mb-8 relative">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Password</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-slate-400" />
+              </div>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" 
+                placeholder="••••••••"
+                required 
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all active:scale-[0.98] disabled:opacity-70"
+          >
+            {isLoading ? 'Authenticating...' : 'Access Dashboard'}
+            {!isLoading && <ArrowRight className="h-5 w-5" />}
+          </button>
+
+          <div className="mt-8 text-center text-sm text-slate-500 border-t border-slate-100 pt-6">
+            Don't have a secure account? <br/>
+            <Link to="/register" className="text-indigo-600 font-bold hover:text-indigo-800 transition-colors">
+              Create an account
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

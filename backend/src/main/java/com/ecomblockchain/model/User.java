@@ -6,6 +6,8 @@ import java.util.List;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import java.math.BigDecimal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
 @Table(name = "users")
@@ -21,6 +23,11 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    private BigDecimal balance = BigDecimal.ZERO;
+
+    @Lob
+    private byte[] signatureData;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -56,4 +63,10 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() { return true; }
+
+    public BigDecimal getBalance() { return balance; }
+    public void setBalance(BigDecimal balance) { this.balance = balance; }
+
+    public byte[] getSignatureData() { return signatureData; }
+    public void setSignatureData(byte[] signatureData) { this.signatureData = signatureData; }
 }

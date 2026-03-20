@@ -37,4 +37,16 @@ public class SmartContractController {
             return ResponseEntity.badRequest().body(new ApiResponse(false, "Cryptographic Signature Failed"));
         }
     }
+
+    @PostMapping("/dispute")
+    public ResponseEntity<ApiResponse> disputeContract(
+            @AuthenticationPrincipal User user, 
+            @RequestBody ContractSignRequest request) {
+        try {
+            String resultMsg = contractService.processDispute(request.orderId(), user);
+            return ResponseEntity.ok(new ApiResponse(true, resultMsg));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        }
+    }
 }
