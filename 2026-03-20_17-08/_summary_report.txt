@@ -1,0 +1,18 @@
+========================================
+      AI CODE PREPROCESSOR REPORT      
+========================================
+
+--- Project: E-comBlockchain ---
+Total Files: 58
+File Types:
+  No Ext: 1
+  .css: 1
+  .html: 1
+  .java: 36
+  .js: 3
+  .json: 2
+  .jsx: 9
+  .md: 1
+  .txt: 1
+  .xml: 2
+  .yml: 1

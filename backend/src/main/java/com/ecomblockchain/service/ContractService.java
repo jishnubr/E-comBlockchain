@@ -41,6 +41,10 @@ public class ContractService {
         Order order = orderRepository.findById(request.orderId())
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        if (!order.getBuyerId().equals(buyer.getId())) {
+            throw new RuntimeException("Unauthorized: You are not the buyer of this order");
+        }
+
         Product product = productRepository.findById(order.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
@@ -83,15 +87,24 @@ public class ContractService {
         return "Buyer " + buyer.getName() + " collateral secured in escrow.";
     }
 
+    // STRICT VALIDATOR FOR THE SHIFTING BLOCKCHAIN STATES
+    private void validateOrderState(Order order, String requiredState) {
+        if (!order.getOrderLevel().equals(requiredState)) {
+            throw new RuntimeException("Invalid state: Contract expected " + requiredState + " but found " + order.getOrderLevel());
+        }
+    }
+
     @Transactional
     public String sellerSign(User seller, ContractSignRequest request) {
         Order order = orderRepository.findById(request.orderId()).orElseThrow();
+        Product product = productRepository.findById(order.getProductId()).orElseThrow();
         
-        // Fairness: Verify Seller signature
-        // Logic: Seller can only sign if Buyer has already signed
-        if (!order.getOrderLevel().equals("BUYER_SIGNED")) {
-            throw new RuntimeException("Contract not ready for Seller signature");
+        if (!product.getSellerId().equals(seller.getId())) {
+            throw new RuntimeException("Unauthorized: You are not the seller of this product");
         }
+        
+        // Strict Sequence Enforcement
+        validateOrderState(order, "BUYER_SIGNED");
 
         KeyPair keyPair = cryptoService.generateECKeyPair();
         String messageToSign = "ORDER_" + order.getId() + "_SELLER_" + seller.getId();
@@ -110,9 +123,12 @@ public class ContractService {
     @Transactional
     public String transporterSign(User transporter, ContractSignRequest request) {
         Order order = orderRepository.findById(request.orderId()).orElseThrow();
+
+        // Standard sequence requires SELLER_SIGNED. (IN_TRANSIT means a transporter took it but didn't deliver, we just enforce SELLER_SIGNED -> DELIVERED here for simplicity)
         if (!"SELLER_SIGNED".equalsIgnoreCase(order.getOrderLevel()) && !"IN_TRANSIT".equalsIgnoreCase(order.getOrderLevel())) {
-            throw new RuntimeException("Order not ready for transport");
+             throw new RuntimeException("Invalid state: Contract expected SELLER_SIGNED or IN_TRANSIT but found " + order.getOrderLevel());
         }
+
         order.setOrderLevel("DELIVERED");
         orderRepository.save(order);
         return "Transporter verified delivery.";
@@ -122,11 +138,8 @@ public class ContractService {
     public String adminSign(User admin, ContractSignRequest request) {
         Order order = orderRepository.findById(request.orderId()).orElseThrow();
         
-        // Fairness Rule: Admin CANNOT take a cut of the funds in a cancellation.
-        // Admin only gets a fee upon successful completion.
-        if (!order.getOrderLevel().equals("DELIVERED")) {
-            throw new RuntimeException("Order must be DELIVERED before arbitration.");
-        }
+        // Strict Fairness Sequence: Admin can only Arbitrate successfully DELIVERED orders
+        validateOrderState(order, "DELIVERED");
 
         order.setOrderLevel("CLOSED_AND_SETTLED");
         orderRepository.save(order);
@@ -181,5 +194,48 @@ public class ContractService {
         // Funds are kept locked during early dispute phases. 
         // A fully decentralized consensus mechanism would typically evaluate this.
         return "Dispute logged. Escrow collateral is currently locked pending arbitration consensus.";
+    }
+
+    @Transactional
+    public String resolveDispute(Long orderId, String winner) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        validateOrderState(order, "DISPUTED");
+        
+        Product product = productRepository.findById(order.getProductId()).orElseThrow();
+        BigDecimal total = product.getPrice().multiply(BigDecimal.valueOf(order.getQuantity()));
+        CentralAccount central = centralAccountRepository.findById(1L).orElseThrow();
+        
+        // Remove from escrow
+        central.setBalance(central.getBalance().subtract(total));
+        centralAccountRepository.save(central);
+        
+        if ("BUYER".equalsIgnoreCase(winner)) {
+            User buyer = userRepository.findById(order.getBuyerId()).orElseThrow();
+            buyer.setBalance(buyer.getBalance().add(total));
+            userRepository.save(buyer);
+        } else if ("SELLER".equalsIgnoreCase(winner)) {
+            User seller = userRepository.findById(product.getSellerId()).orElseThrow();
+            seller.setBalance(seller.getBalance().add(total));
+            userRepository.save(seller);
+        } else if ("TRANSPORTER".equalsIgnoreCase(winner)) {
+            BigDecimal transporterFee = total.multiply(new BigDecimal("0.05"));
+            User transporter = userRepository.findByRole(Role.TRANSPORTER);
+            if (transporter != null) {
+                transporter.setBalance(transporter.getBalance().add(transporterFee));
+                userRepository.save(transporter);
+            }
+            // Refund remainder to Buyer
+            BigDecimal remainder = total.subtract(transporterFee);
+            User buyer = userRepository.findById(order.getBuyerId()).orElseThrow();
+            buyer.setBalance(buyer.getBalance().add(remainder));
+            userRepository.save(buyer);
+        } else {
+            throw new RuntimeException("Invalid dispute winner specified.");
+        }
+        
+        order.setOrderLevel("CLOSED_AND_SETTLED");
+        orderRepository.save(order);
+        
+        return "Dispute resolved in favor of " + winner;
     }
 }

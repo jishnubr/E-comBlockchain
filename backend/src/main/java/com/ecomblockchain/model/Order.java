@@ -18,6 +18,12 @@ public class Order {
     private Integer quantity = 1;
     private Integer verificationStrikes = 0;
 
+    @Version
+    private Integer version;
+
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

@@ -40,4 +40,17 @@ public class SmartContractController {
         String resultMsg = contractService.processDispute(request.orderId(), user);
         return ResponseEntity.ok(new ApiResponse(true, resultMsg));
     }
+
+    @PostMapping("/{orderId}/resolve/{winner}")
+    public ResponseEntity<ApiResponse> resolveDispute(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long orderId,
+            @PathVariable String winner) {
+            
+        if (user.getRole() != com.ecomblockchain.model.Role.ADMIN) {
+            throw new RuntimeException("Unauthorized: Only Admins can manually resolve disputes.");
+        }
+        String resultMsg = contractService.resolveDispute(orderId, winner);
+        return ResponseEntity.ok(new ApiResponse(true, resultMsg));
+    }
 }
